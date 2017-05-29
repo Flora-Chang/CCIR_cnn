@@ -51,6 +51,8 @@ with tf.Session(config=config) as sess:
                   filter_size=FLAGS.filter_size,
                   keep_prob=FLAGS.keep_prob)
 
+    saver = tf.train.Saver()
+
     log_dir = "../logs/" + model_name
     #train_writer = tf.summary.FileWriter(log_dir + "/train", sess.graph)
     #valid_writer = tf.summary.FileWriter(log_dir + "/valid")
@@ -98,7 +100,14 @@ with tf.Session(config=config) as sess:
             _, loss ,score1, score2, subs= sess.run([model.train_op, model.loss, model.score1, \
                                                        model.score2, model.sub], feed_dict)
 
-            if step % 300== 0:
+            if step % 500== 0:
+                '''
+                if step >= 2000:
+                    checkpoint_dir = "./save_%d/" % step
+                    if not os.path.exists(checkpoint_dir):
+                        os.mkdir(checkpoint_dir)
+                    saver.save(sess, checkpoint_dir + 'model.ckpt')
+                '''
                 print(step, " - loss:", loss)
                 #print("max:",max_score)
                 #print("features_0:", features_local0[:1,:3,:10])

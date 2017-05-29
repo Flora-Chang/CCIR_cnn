@@ -14,6 +14,7 @@ class Model(object):
         self.max_doc_word = max_doc_word
         self.num_docs = num_docs
         self.filter_size = filter_size
+        #self.regularizer = tf.contrib.layers.l2_regularizer(0.001)
         self._input_layer()
         self.train(self.features_local, self.queries, self.docs)
         self.test(self.feature_local, self.query, self.doc)
@@ -51,7 +52,7 @@ class Model(object):
             dense2 = tf.layers.dense(inputs=dense1, units=self.filter_size, activation=tf.nn.tanh)
             dropout = tf.layers.dropout(inputs=dense2, rate=self.keep_prob, training=is_training)
             dense3 = tf.layers.dense(inputs=dropout, units=1, activation=tf.nn.tanh)  #[?,1]
-            self.local_output = 0.3*dense3
+            self.local_output = dense3
             return self.local_output       
     '''
 
@@ -83,6 +84,7 @@ class Model(object):
                 query = tf.reshape(embedding_query, [-1, self.max_query_word, self.embedding_size, 1]) #[?, 15, self.embedding_size,1]
                 conv1 = tf.layers.conv2d(inputs=query, filters=self.filter_size, \
                                          kernel_size=[3, self.embedding_size], activation=tf.nn.tanh) #[?,15-3+1,1, self.filter_size]
+                #pooling_size = self.max_query_word - 3 + 1
                 pooling_size = self.max_query_word - 3 + 1
                 pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[pooling_size, 1],strides=[1,1])  #[?, 1,1 self.filter_size]
                 pool1 = tf.reshape(pool1, [-1,self.filter_size]) #[?, self.filter_size]
@@ -96,10 +98,12 @@ class Model(object):
                 pooling_size = 80
                 pool1 = tf.layers.max_pooling1d(inputs=conv1, pool_size=[pooling_size], strides=[1])
                 #[?, self.max_doc_word-3+1-pooling_size+1, self.filter_size]
-                conv2 = tf.layers.conv1d(inputs=pool1, filters=self.filter_size, kernel_size=[ 1])
+                conv2 = tf.layers.conv1d(inputs=pool1, filters=self.filter_size, kernel_size=[1])
                 self.distrib_doc = conv2 #like before
+                #self.dims1 = self.max_doc_word - pooling_size -1
+                #self.dims2 = (self.max_doc_word - pooling_size -1)*self.filter_size
                 self.dims1 = self.max_doc_word - pooling_size -1
-                self.dims2 = (self.max_doc_word - pooling_size -1)*self.filter_size
+                self.dims2 = (self.max_doc_word - pooling_size -1 )*self.filter_size
 
             self.distrib_query = tf.tile(tf.expand_dims(self.distrib_query, 1), [1,self.dims1, 1])
             distrib = tf.multiply(self.distrib_query, self.distrib_doc) #[?, self.dims1, self.filter_size]
@@ -116,10 +120,10 @@ class Model(object):
         with tf.variable_scope('emsemble_model'):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
-            #self.model_output = tf.add(self.local_model(is_training=is_training, features_local = features_local,\
-                                                        #reuse=reuse),self.distrib_model(is_training=is_training, \
-                                                        #query=query,doc=doc,reuse=reuse))
-            self.model_output =  self.distrib_model(is_training=is_training, query=query, doc=doc,reuse=reuse)
+            self.model_output = tf.add(self.local_model(is_training=is_training, features_local = features_local,\
+                                                        reuse=reuse),self.distrib_model(is_training=is_training, \
+                                                        query=query,doc=doc,reuse=reuse))
+            #self.model_output =  self.distrib_model(is_training=is_training, query=query, doc=doc,reuse=reuse)
             #self.model_output = self.local_model(is_training=is_training, features_local = features_local,reuse=reuse)
         #output = tf.nn.sigmoid(self.model_output)
         output = self.model_output
@@ -154,7 +158,11 @@ class Model(object):
         #self.losses = tf.maximum(zero, tf.subtract(margin, tf.subtract(self.score1, self.score2)))
         self.losses = tf.maximum(0.0, tf.subtract(1.0, tf.subtract(self.score1, self.score2)))
         #print("losses:",self.losses)
+        #vars = tf.trainable_variables()
+        #loss_l2 = tf.add_n([tf.nn.l2_loss(v) for v in vars if 'bias' not in v.name]) * 0.01
         self.loss = tf.reduce_mean(self.losses)
+        #self.loss = tf.reduce_mean(self.losses) + tf.contrib.layers.apply_regularization(self.regularizer)
+        print("weights:",tf.GraphKeys.WEIGHTS)
         #self.loss = tf.reduce_sum(self.losses)
         #self.loss = tf.reduce_mean(tf.subtract(0.0,self.sub))
         print("loss:",self.loss)
@@ -164,5 +172,6 @@ class Model(object):
     def test(self, feature_local, query, doc):
         self.score = self.ensemble_model(features_local=feature_local,query=query,\
                                          doc=doc, is_training=False,reuse=True)
+        self.score = tf.squeeze(self.score, -1)
         print("score:",self.score)
 

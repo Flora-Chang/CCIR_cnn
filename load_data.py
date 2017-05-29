@@ -14,7 +14,7 @@ def get_vocab_dict(input_file="../data/word_dict.txt"):
     return words_dict
 
 
-def get_word_vector(input_file="../data/vectors_word.txt"):
+def get_word_vector(input_file="../data/vectors_word_50.txt"):
     word_vectors = []
     with open(input_file) as f:
         for line in f:
@@ -141,6 +141,7 @@ class LoadTestData(object):
         self.data = open(data_path, 'r').readlines()
         self.data_size = len(self.data)
         self.batch_size = batch_size
+        self.cnt = 0
 
     def _word_2_id(self, word):
         if word in self.vocab_dict.keys():
@@ -152,9 +153,12 @@ class LoadTestData(object):
     def next_batch(self):
         if self.batch_size == -1:
             self.batch_size = 200
-            self.data_size = self.batch_size*5
-        while (self.index + 1) * self.batch_size <= self.data_size:
-            batch_data = self.data[self.index * self.batch_size: (self.index + 1) * self.batch_size]
+            self.data_size = self.batch_size*15
+        while (self.index ) * self.batch_size < self.data_size:
+            if (self.index + 1) * self.batch_size <= self.data_size:
+                batch_data = self.data[self.index * self.batch_size: (self.index + 1) * self.batch_size]
+            else:
+                batch_data = self.data[self.index * self.batch_size: self.data_size]
             self.index += 1
             queries = []
             query_ids = []
@@ -164,6 +168,7 @@ class LoadTestData(object):
             batch_features_local = []
 
             for line in batch_data:
+                self.cnt += 1
                 line = json.loads(line)
                 passages = line['passages']
                 query_id = line['query_id']
@@ -192,3 +197,5 @@ class LoadTestData(object):
             queries = batch(queries, self.query_len_threshold)
             answers = batch(answers, self.doc_len_threshold)
             yield batch_features_local, (query_ids, queries), (answers_ids, answers, answers_label)
+
+        print("self.cnt:", self.cnt)
