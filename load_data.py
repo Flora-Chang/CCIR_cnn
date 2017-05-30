@@ -14,7 +14,7 @@ def get_vocab_dict(input_file="../data/word_dict.txt"):
     return words_dict
 
 
-def get_word_vector(input_file="../data/vectors_word_50.txt"):
+def get_word_vector(input_file="../data/vectors_word.txt"):
     word_vectors = []
     with open(input_file) as f:
         for line in f:
