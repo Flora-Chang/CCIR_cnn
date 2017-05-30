@@ -10,6 +10,8 @@ def dcg_k(data, k=3):
         bottom = np.log2(data['rank'][num] + 1)
         score += np.divide(top, bottom)
     return score
+
+
 def normalized_dcg_k(data, real_data, k=3):
     score = 0
     real_score = 0
@@ -34,17 +36,16 @@ def test(sess, model, testing_set, filename=None):
     DCG_3 = []
     DCG_5 = []
     DCG_full = []
-    little_list = []
 
     zero_3 = 0
     zero_5 = 0
     for batch_data in testing_set.next_batch():
-        batch_features_local,(test_query_ids, test_queries), \
+        batch_features_local, (test_query_ids, test_queries), \
          (answers_ids, answers, answers_label) = batch_data
 
-        fd = {"Inputs/query:0": test_queries,
-              "Inputs/doc:0": answers,
-              "Inputs/feature_local:0": batch_features_local}
+        fd = {model.query: test_queries,
+              model.doc: answers,
+              model.feature_local: batch_features_local}
 
         res = sess.run([model.score], fd)
 
@@ -72,9 +73,6 @@ def test(sess, model, testing_set, filename=None):
             norm_dcg_3 = normalized_dcg_k(result, real, 3)
             norm_dcg_5 = normalized_dcg_k(result, real, 5)
             norm_dcg_full = normalized_dcg_k(result, real, rank[-1])
-            if norm_dcg_3 < 0.6 and norm_dcg_5 < 0.7:
-                little_list.append(query_id)
-
             result = passages.sort_values(by=['passage_id'], ascending=True).reset_index(drop=True)
             out_frames.append(result)
 
@@ -109,10 +107,6 @@ def test(sess, model, testing_set, filename=None):
     print("DCG@5 Mean: ", dcg_5_mean, "mean: ", norm_dcg_5_mean)
     print("DCG@full Mean: ", dcg_full_mean, "mean: ", norm_dcg_full_mean)
     print("================================")
-
-    with open("./worse_queries.txt", 'r') as f:
-        for i in little_list:
-            f.write(str(i) + '\n')
 
     return dcg_3_mean, dcg_5_mean, dcg_full_mean
 
