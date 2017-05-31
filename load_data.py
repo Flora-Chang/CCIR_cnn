@@ -90,7 +90,9 @@ class LoadTrainData(object):
         with open(self.data_path) as f:
             for line in f:
                 line = line.strip().split(',')
-
+                ori_query = line[1].split()
+                ori_pos_ans = line[3].split()
+                ori_neg_ans = line[5].split()
                 query = list(map(self._word_2_id, line[1].split()))
                 pos_ans = list(map(self._word_2_id, line[3].split()))
                 neg_ans = list(map(self._word_2_id, line[5].split()))
