@@ -143,21 +143,4 @@ with tf.Session(config=config) as sess:
 
 
             step += 1
-            #train_writer.add_summary(summary, step)
-
-        '''
-        print("On test set:\n")
-        dcg_3, dcg_5, dcg_full = test(sess, model, test_set)
-
-        test_DCG_3.append(dcg_3)
-        test_DCG_5.append(dcg_5)
-        test_DCG_full.append(dcg_full)
-        '''
-
-        '''
-        saver = tf.train.Saver(tf.global_variables())
-
-        saver_path = saver.save(sess, os.path.join(log_dir, "model.ckpt"), step)
-        '''
-
 

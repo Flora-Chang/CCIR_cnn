@@ -72,7 +72,7 @@ def test(sess, model, testing_set, filename=None):
             norm_dcg_3 = normalized_dcg_k(result, real, 3)
             norm_dcg_5 = normalized_dcg_k(result, real, 5)
             norm_dcg_full = normalized_dcg_k(result, real, rank[-1])
-            if norm_dcg_3 < 0.6 and norm_dcg_5 < 0.7:
+            if norm_dcg_3 < 0.65 and norm_dcg_5 < 0.70:
                 little_list.append(query_id)
 
             result = passages.sort_values(by=['passage_id'], ascending=True).reset_index(drop=True)
