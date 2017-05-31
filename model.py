@@ -49,6 +49,7 @@ class Model(object):
                                     activation=tf.nn.tanh) #[?,15,1,self.filter_size]
             conv = tf.reshape(conv, [-1,self.filter_size*self.max_query_word]) #[?,15*self.filter_size]
             dense1 = tf.layers.dense(inputs=conv, units=self.filter_size, activation=tf.nn.tanh) #[?, self.filter_size]
+            #dropout = tf.layers.dropout(inputs=dense1, rate=self.keep_prob, training=is_training) #extra add
             dense2 = tf.layers.dense(inputs=dense1, units=self.filter_size, activation=tf.nn.tanh)
             #dropout = tf.layers.dropout(inputs=dense2, rate=self.keep_prob, training=is_training)
             #dense3 = tf.layers.dense(inputs=dropout, units=1, activation=tf.nn.tanh)  #[?,1]
@@ -91,6 +92,7 @@ class Model(object):
             distrib = tf.multiply(self.distrib_query, self.distrib_doc) #[?, self.dims1, self.filter_size]
             distrib = tf.reshape(distrib,[-1,self.dims2]) #[?, self.dims2]
             fuly1 = tf.layers.dense(inputs=distrib, units=self.filter_size, activation=tf.nn.tanh)
+            #drop = tf.layers.dropout(inputs=fuly1, rate=self.keep_prob, training=is_training)  # extra add
             fuly2 = tf.layers.dense(inputs=fuly1, units=self.filter_size, activation=tf.nn.tanh)
             #drop2 = tf.layers.dropout(inputs=fuly2, rate=self.keep_prob, training=is_training)
             #fuly3 = tf.layers.dense(inputs=drop2, units=1, activation=tf.nn.tanh)
@@ -110,13 +112,14 @@ class Model(object):
             self.model_output = tf.concat([self.local_model(is_training=is_training, features_local=features_local, \
                                                             reuse=reuse),self.distrib_model(is_training=is_training, \
                                                             query=query,doc=doc,reuse=reuse)], axis=-1)
-            fuly = tf.layers.dense(inputs=self.model_output, units=1, activation=tf.nn.tanh)
+            fuly = tf.layers.dense(inputs=self.model_output, units=self.filter_size, activation=tf.nn.tanh)
+            fuly1 = tf.layers.dense(inputs=fuly, units=1, activation=tf.nn.tanh)
             #self.model_output =  self.distrib_model(is_training=is_training, query=query, doc=doc,reuse=reuse)
             #self.model_output = self.local_model(is_training=is_training, features_local = features_local,reuse=reuse)
 
         #output = tf.nn.sigmoid(self.model_output)
         #output = self.model_output
-        output = fuly
+        output = fuly1
         return output
 
     def train(self, features_local, query, docs):

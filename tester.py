@@ -117,7 +117,7 @@ def test(sess, model, testing_set, filename=None):
 
     with open("./worse_queries.txt", 'w') as f:
         for i, j in zip(little_list, little_dcg):
-            f.write(str(i) + str(j) + '\n')
+            f.write(str(i) + '\t' + str(j) + '\n')
 
 
     return dcg_3_mean, dcg_5_mean, dcg_full_mean
