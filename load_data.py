@@ -80,7 +80,7 @@ class LoadTrainData(object):
 
     def _data_to_tfrecords(self):
         if os.path.exists(self.tfrecords):
-            print("Exist tfrecords.")
+            print("Exist tfrecords")
             return
         print("start data to tfrecords for train ...")
         writer = tf.python_io.TFRecordWriter(self.tfrecords)
