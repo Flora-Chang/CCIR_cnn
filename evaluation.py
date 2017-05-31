@@ -28,11 +28,12 @@ config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.9
 with tf.Session(config=config) as sess:
     timestamp = str(int(time.time()))
-    print("timestamp: ",  time.asctime(time.localtime(time.time()) ))
+    #print("timestamp: ",  time.asctime(time.localtime(time.time())))
+    print("timestamp: ", timestamp)
     model_name = "lr{}_bz{}_mg{}_{}".format(FLAGS.learning_rate,
-                                                             FLAGS.batch_size,
-                                                             FLAGS.margin,
-                                                             timestamp)
+                                            FLAGS.batch_size,
+                                            FLAGS.margin,
+                                            timestamp)
 
     model = Model(max_query_word=FLAGS.query_len_threshold,
                   max_doc_word=FLAGS.doc_len_threshold,

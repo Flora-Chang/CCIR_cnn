@@ -10,6 +10,8 @@ def dcg_k(data, k=3):
         bottom = np.log2(data['rank'][num] + 1)
         score += np.divide(top, bottom)
     return score
+
+
 def normalized_dcg_k(data, real_data, k=3):
     score = 0
     real_score = 0
@@ -39,12 +41,12 @@ def test(sess, model, testing_set, filename=None):
     zero_3 = 0
     zero_5 = 0
     for batch_data in testing_set.next_batch():
-        batch_features_local,(test_query_ids, test_queries), \
+        batch_features_local, (test_query_ids, test_queries), \
          (answers_ids, answers, answers_label) = batch_data
 
-        fd = {"Inputs/query:0": test_queries,
-              "Inputs/doc:0": answers,
-              "Inputs/feature_local:0": batch_features_local}
+        fd = {model.query: test_queries,
+              model.doc: answers,
+              model.feature_local: batch_features_local}
 
         res = sess.run([model.score], fd)
 
