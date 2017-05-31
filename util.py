@@ -6,7 +6,6 @@ flags = tf.app.flags
 # Model parameters
 
 flags.DEFINE_integer("filter_size", 64, "the num of filters of CNN")
-
 flags.DEFINE_integer("embedding_dim", 100, "words embedding size")
 flags.DEFINE_float("keep_prob", 0.8, "dropout keep prob")
 

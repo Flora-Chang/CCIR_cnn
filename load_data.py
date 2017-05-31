@@ -166,9 +166,12 @@ class LoadTestData(object):
     def next_batch(self):
         if self.batch_size == -1:
             self.batch_size = 200
-            self.data_size = self.batch_size * 5
-        while (self.batch_index + 1) * self.batch_size <= self.data_size:
-            batch_data = self.data[self.batch_index * self.batch_size: (self.batch_index + 1) * self.batch_size]
+            self.data_size = self.batch_size * 10
+        while (self.batch_index) * self.batch_size < self.data_size:
+            if (self.batch_index + 1) * self.batch_size <= self.data_size:
+                batch_data = self.data[self.batch_index * self.batch_size: (self.batch_index + 1) * self.batch_size]
+            else:
+                batch_data = self.data[self.batch_index * self.batch_size: self.data_size]
             self.batch_index += 1
             queries = []
             query_ids = []
