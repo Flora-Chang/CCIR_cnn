@@ -87,25 +87,27 @@ class LoadTrainData(object):
         with open(self.data_path) as f:
             for line in f:
                 line = line.strip().split(',')
+                ori_query = line[1].split()
+                ori_pos_ans = line[3].split()
+                ori_neg_ans = line[5].split()
+                query = list(map(self._word_2_id, ori_query))
+                pos_ans = list(map(self._word_2_id, ori_pos_ans))
+                neg_ans = list(map(self._word_2_id, ori_neg_ans))
 
-                query = list(map(self._word_2_id, line[1].split()))
-                pos_ans = list(map(self._word_2_id, line[3].split()))
-                neg_ans = list(map(self._word_2_id, line[5].split()))
-
-                docs = [pos_ans, neg_ans]
+                docs = [ori_pos_ans, ori_neg_ans]
                 features_local = np.array([])
                 for doc in docs:
                     local_match = np.zeros(shape=[self.query_len_threshold, self.doc_len_threshold], dtype=np.int64)
-                    for i in range(min(self.query_len_threshold, len(query))):
+                    for i in range(min(self.query_len_threshold, len(ori_query))):
                         for j in range(min(self.doc_len_threshold, len(doc))):
-                            if query[i] == doc[j]:
+                            if ori_query[i] == doc[j]:
                                 local_match[i, j] = 1
                     local_match = local_match.reshape([self.query_len_threshold * self.doc_len_threshold])
                     features_local = np.concatenate((features_local, local_match))
                 query = normalize(query, self.query_len_threshold)
                 pos_ans = normalize(pos_ans, self.doc_len_threshold)
                 neg_ans = normalize(neg_ans, self.doc_len_threshold)
-                features_local = features_local.astype(int)
+                features_local = features_local.astype(np.int64)
 
                 example = tf.train.Example(features=tf.train.Features(feature={
                     "query": tf.train.Feature(int64_list=tf.train.Int64List(value=query)),
@@ -133,8 +135,6 @@ class LoadTrainData(object):
         pos_ans = features['pos_ans']
         neg_ans = features['neg_ans']
         features_local = tf.reshape(features['features_local'], [2, FLAGS.query_len_threshold, self.doc_len_threshold])
-
-
         docs = [pos_ans, neg_ans]
 
         return features_local, query, docs
