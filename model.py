@@ -46,34 +46,16 @@ class Model(object):
                 tf.get_variable_scope().reuse_variables()
             features_local = tf.reshape(features_local, [-1, self.max_query_word, self.max_doc_word]) #[?,15,200]
             conv = tf.layers.conv1d(inputs=features_local, filters=self.filter_size, kernel_size=[ 1], \
-                                    activation=tf.nn.relu) #[?,15,1,self.filter_size]
+                                    activation=tf.nn.tanh) #[?,15,1,self.filter_size]
             conv = tf.reshape(conv, [-1,self.filter_size*self.max_query_word]) #[?,15*self.filter_size]
             dense1 = tf.layers.dense(inputs=conv, units=self.filter_size, activation=tf.nn.tanh) #[?, self.filter_size]
             dense2 = tf.layers.dense(inputs=dense1, units=self.filter_size, activation=tf.nn.tanh)
-            dropout = tf.layers.dropout(inputs=dense2, rate=self.keep_prob, training=is_training)
-            dense3 = tf.layers.dense(inputs=dropout, units=1, activation=tf.nn.tanh)  #[?,1]
-            self.local_output = dense3
+            #dropout = tf.layers.dropout(inputs=dense2, rate=self.keep_prob, training=is_training)
+            #dense3 = tf.layers.dense(inputs=dropout, units=1, activation=tf.nn.tanh)  #[?,1]
+            #self.local_output =  dense3
+            self.local_output = dense2
             return self.local_output       
-    '''
 
-    def local_model(self, features_local, is_training=True, reuse=False):
-        with tf.variable_scope('local_model'):
-            if reuse:
-                tf.get_variable_scope().reuse_variables()
-            features_local = tf.reshape(features_local, [-1, self.max_query_word, self.max_doc_word, 1])  # [?,15,200]
-            conv = tf.layers.conv2d(inputs=features_local, filters=self.filter_size, kernel_size=[3, 3], \
-                                padding="same", activation=tf.nn.tanh)  # [?,15,1,self.filter_size]
-            pool = tf.layers.max_pooling2d(conv, pool_size=[3,3], strides=[1,1])
-            print("pool:", pool)
-            pool = tf.reshape(pool, [-1, self.filter_size * (self.max_query_word-2)*(self.max_doc_word-2)])  # [?,15*self.filter_size]
-            dense1 = tf.layers.dense(inputs=pool, units=self.filter_size*(self.max_query_word-1),
-                                     activation=tf.nn.tanh)  # [?, self.filter_size]
-            dense2 = tf.layers.dense(inputs=dense1, units=self.filter_size, activation=tf.nn.tanh)
-            dropout = tf.layers.dropout(inputs=dense2, rate=self.keep_prob, training=is_training)
-            dense3 = tf.layers.dense(inputs=dropout, units=1, activation=tf.nn.tanh)  # [?,1]
-            self.local_output = dense3
-            return self.local_output
-    '''
 
     def distrib_model(self, query, doc, is_training=True, reuse=False):
         with tf.variable_scope('distrib_model'):
@@ -109,24 +91,32 @@ class Model(object):
             distrib = tf.multiply(self.distrib_query, self.distrib_doc) #[?, self.dims1, self.filter_size]
             distrib = tf.reshape(distrib,[-1,self.dims2]) #[?, self.dims2]
             fuly1 = tf.layers.dense(inputs=distrib, units=self.filter_size, activation=tf.nn.tanh)
-            #fuly2 = tf.layers.dense(inputs=fuly1, units=self.filter_size, activation=tf.nn.tanh)
-            drop2 = tf.layers.dropout(inputs=fuly1, rate=self.keep_prob, training=is_training)
-            fuly3 = tf.layers.dense(inputs=drop2, units=1, activation=tf.nn.tanh)
-            self.distrib_output = fuly3 #[?, 1]
+            fuly2 = tf.layers.dense(inputs=fuly1, units=self.filter_size, activation=tf.nn.tanh)
+            #drop2 = tf.layers.dropout(inputs=fuly2, rate=self.keep_prob, training=is_training)
+            #fuly3 = tf.layers.dense(inputs=drop2, units=1, activation=tf.nn.tanh)
+            #self.distrib_output = fuly3 #[?, 1]
+            self.distrib_output = fuly2  # [?, 1]
             print("distrib_output:",self.distrib_output)
             return self.distrib_output
+
 
     def ensemble_model(self, features_local, query, doc, is_training=True, reuse=False):
         with tf.variable_scope('emsemble_model'):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
-            self.model_output = tf.add(self.local_model(is_training=is_training, features_local = features_local,\
-                                                        reuse=reuse),self.distrib_model(is_training=is_training, \
-                                                        query=query,doc=doc,reuse=reuse))
+            #self.model_output = tf.add(self.local_model(is_training=is_training, features_local = features_local,\
+                                                        #reuse=reuse),self.distrib_model(is_training=is_training, \
+                                                        #query=query,doc=doc,reuse=reuse))
+            self.model_output = tf.concat([self.local_model(is_training=is_training, features_local=features_local, \
+                                                            reuse=reuse),self.distrib_model(is_training=is_training, \
+                                                            query=query,doc=doc,reuse=reuse)], axis=-1)
+            fuly = tf.layers.dense(inputs=self.model_output, units=1, activation=tf.nn.tanh)
             #self.model_output =  self.distrib_model(is_training=is_training, query=query, doc=doc,reuse=reuse)
             #self.model_output = self.local_model(is_training=is_training, features_local = features_local,reuse=reuse)
+
         #output = tf.nn.sigmoid(self.model_output)
-        output = self.model_output
+        #output = self.model_output
+        output = fuly
         return output
 
     def train(self, features_local, query, docs):

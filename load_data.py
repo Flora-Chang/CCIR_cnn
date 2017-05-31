@@ -14,7 +14,7 @@ def get_vocab_dict(input_file="../data/word_dict.txt"):
     return words_dict
 
 
-def get_word_vector(input_file="../data/vectors_word_50.txt"):
+def get_word_vector(input_file="../data/vectors_word.txt"):
     word_vectors = []
     with open(input_file) as f:
         for line in f:
@@ -55,7 +55,7 @@ class LoadTrainData(object):
         self.batch_size = batch_size
         self.doc_len_threshold = doc_len_threshold  # 句子长度限制
         self.query_len_threshold = query_len_threshold
-        self.data = open(self.data_path, 'r').readlines()
+        self.data = np.array(open(self.data_path, 'r').readlines())
         self.batch_index = 0
         print("len data: ", len(self.data))
 
@@ -68,16 +68,18 @@ class LoadTrainData(object):
 
     def next_batch(self, shuffle=True):
         self.batch_index = 0
-        data = np.array(self.data)
-        data_size = len(data)
+        #data = np.array(self.data)
+        data_size = len(self.data)
         num_batches_per_epoch = int(data_size / self.batch_size) + 1
         print("training_set:", data_size, num_batches_per_epoch)
-
+        '''
         if shuffle:
             shuffle_indices = np.random.permutation(np.arange(data_size))
             shuffled_data = data[shuffle_indices]
         else:
             shuffled_data = data
+        '''
+        np.random.shuffle(self.data)
 
         while self.batch_index < num_batches_per_epoch \
                 and (self.batch_index + 1) * self.batch_size <= data_size:
@@ -91,7 +93,9 @@ class LoadTrainData(object):
             start_index = self.batch_index * self.batch_size
             self.batch_index += 1
             end_index = min(self.batch_index * self.batch_size, data_size)
-            batch_data = shuffled_data[start_index:end_index]
+            #batch_data = shuffled_data[start_index:end_index]
+            batch_data = self.data[start_index:end_index]
+
 
             for line in batch_data.tolist():
                 line = line.split(',')

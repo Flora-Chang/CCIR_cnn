@@ -34,7 +34,8 @@ def test(sess, model, testing_set, filename=None):
     DCG_3 = []
     DCG_5 = []
     DCG_full = []
-
+    little_list = []
+    little_dcg = []
     zero_3 = 0
     zero_5 = 0
     for batch_data in testing_set.next_batch():
@@ -71,6 +72,11 @@ def test(sess, model, testing_set, filename=None):
             norm_dcg_3 = normalized_dcg_k(result, real, 3)
             norm_dcg_5 = normalized_dcg_k(result, real, 5)
             norm_dcg_full = normalized_dcg_k(result, real, rank[-1])
+
+            if norm_dcg_3 < 0.65 and norm_dcg_5 < 0.70:
+                little_list.append(query_id)
+                little_dcg.append(norm_dcg_3)
+
             result = passages.sort_values(by=['passage_id'], ascending=True).reset_index(drop=True)
             out_frames.append(result)
 
@@ -105,6 +111,10 @@ def test(sess, model, testing_set, filename=None):
     print("DCG@5 Mean: ", dcg_5_mean, "mean: ", norm_dcg_5_mean)
     print("DCG@full Mean: ", dcg_full_mean, "mean: ", norm_dcg_full_mean)
     print("================================")
+
+    with open("./worse_queries.txt", 'w') as f:
+        for i, j in zip(little_list, little_dcg):
+            f.write(str(i) + str(j) + '\n')
 
     return dcg_3_mean, dcg_5_mean, dcg_full_mean
 
