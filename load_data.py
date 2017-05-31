@@ -92,13 +92,13 @@ class LoadTrainData(object):
                 pos_ans = list(map(self._word_2_id, line[3].split()))
                 neg_ans = list(map(self._word_2_id, line[5].split()))
 
-                docs = [pos_ans, neg_ans]
+                docs = [ori_pos_ans, ori_neg_ans]
                 features_local = np.array([])
                 for doc in docs:
                     local_match = np.zeros(shape=[self.query_len_threshold, self.doc_len_threshold], dtype=np.int64)
-                    for i in range(min(self.query_len_threshold, len(query))):
+                    for i in range(min(self.query_len_threshold, len(ori_query))):
                         for j in range(min(self.doc_len_threshold, len(doc))):
-                            if query[i] == doc[j]:
+                            if ori_query[i] == doc[j]:
                                 local_match[i, j] = 1
                     local_match = local_match.reshape([self.query_len_threshold * self.doc_len_threshold])
                     features_local = np.concatenate((features_local, local_match))
