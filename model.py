@@ -154,8 +154,8 @@ class Model(object):
             self.sm_loss_op = tf.summary.scalar('Loss', self.loss)
 
         with tf.name_scope("optimizer"):
-            self.optimize_op = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
-            #self.optimize_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            #self.optimize_op = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            self.optimize_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
     def test(self, feature_local, query, doc):
         self.score = self.ensemble_model(features_local=feature_local, query=query,

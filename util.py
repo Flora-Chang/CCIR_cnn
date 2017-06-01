@@ -14,7 +14,7 @@ flags.DEFINE_integer("query_len_threshold", 20, "threshold value of query length
 flags.DEFINE_integer("doc_len_threshold", 200, "threshold value of document length")
 flags.DEFINE_integer("batch_size", 128, "batch size")
 flags.DEFINE_integer("num_epochs", 2, "number of epochs")
-flags.DEFINE_float("learning_rate", 0.001, "learning rate")
+flags.DEFINE_float("learning_rate", 0.0005, "learning rate")
 flags.DEFINE_float("margin", 1, "cos margin")
 
 flags.DEFINE_string("vocab_dict", "../data/word_dict.txt", "vocab dict path")
