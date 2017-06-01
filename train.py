@@ -40,6 +40,7 @@ dev_set = LoadTestData(vocab_dict, "../data/dev.json",
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.9
 
+
 with tf.Session(config=config) as sess:
     timestamp = str(int(time.time()))
     print("timestamp: ", timestamp)
@@ -60,10 +61,12 @@ with tf.Session(config=config) as sess:
                   keep_prob=FLAGS.keep_prob)
 
     log_dir = "../logs/" + model_name
+    model_path = os.path.join(log_dir, "model.ckpt")
     train_writer = tf.summary.FileWriter(log_dir + "/train", sess.graph)
 
     init = tf.global_variables_initializer()
     sess.run(init)
+
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
@@ -84,7 +87,7 @@ with tf.Session(config=config) as sess:
     num_epochs = FLAGS.num_epochs
     for epoch in range(num_epochs):
         print("epoch: ", epoch)
-        for i in range(total_steps):
+        for i in range(10):
             features_local, queries, docs = sess.run([features_local_batch, query_batch, docs_batch])
             labels = np.zeros(shape=[FLAGS.batch_size, 2], dtype=np.float32)
             for label in labels:
@@ -137,10 +140,10 @@ with tf.Session(config=config) as sess:
         test_DCG_full.append(dcg_full)
         '''
 
-        '''
         saver = tf.train.Saver(tf.global_variables())
-
         saver_path = saver.save(sess, os.path.join(log_dir, "model.ckpt"), step)
-        '''
+
+    train_writer.close()
+
     coord.request_stop()
     coord.join(threads)

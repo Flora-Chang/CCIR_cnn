@@ -103,10 +103,10 @@ def test(sess, model, testing_set, filename=None):
 
     print("number of Zero DCG@3: ", zero_3)
     print("number of Zero DCG@5: ", zero_5)
-    print("DCG@3 Mean: ", dcg_3_mean, "mean: ", norm_dcg_3_mean)
-    print("DCG@5 Mean: ", dcg_5_mean, "mean: ", norm_dcg_5_mean)
-    print("DCG@full Mean: ", dcg_full_mean, "mean: ", norm_dcg_full_mean)
-    print("================================")
+    print("DCG@3 Mean: ", dcg_3_mean, "\tNorm: ", norm_dcg_3_mean)
+    print("DCG@5 Mean: ", dcg_5_mean, "\tNorm: ", norm_dcg_5_mean)
+    print("DCG@full Mean: ", dcg_full_mean, "\tNorm: ", norm_dcg_full_mean)
+    print("=" * 60)
 
     return dcg_3_mean, dcg_5_mean, dcg_full_mean
 

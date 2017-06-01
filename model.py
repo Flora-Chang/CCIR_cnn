@@ -21,6 +21,7 @@ class Model(object):
         self.optimizer(self.features_local, self.queries, self.docs)
         self.test(self.feature_local, self.query, self.doc)
         self.merged_summary_op = tf.summary.merge([self.sm_loss_op, self.sm_emx_op])
+        #self.merged_summary_op = tf.summary.merge([self.sm_loss_op])
 
     def _input_layer(self):
         #with tf.variable_scope('Inputs'):
@@ -117,11 +118,18 @@ class Model(object):
         with tf.variable_scope('Ensemble_model'):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
-            self.model_output = tf.add(self.local_model(is_training=is_training, features_local = features_local,
-                                                        reuse=reuse),self.distrib_model(is_training=is_training,
-                                                        query=query,doc=doc,reuse=reuse))
+
+            self.model_output = tf.add(self.local_model(is_training=is_training, 
+                                                        features_local=features_local, 
+                                                        reuse=reuse),
+                                       self.distrib_model(is_training=is_training, 
+                                                          query=query,
+                                                          doc=doc,
+                                                          reuse=reuse),
+                                       name='score')
+
             #self.model_output =  self.distrib_model(is_training=is_training, query=query, doc=doc, reuse=reuse)
-            #self.model_output = self.local_model(is_training=is_training, features_local = features_local,reuse=reuse)
+            #self.model_output = self.local_model(is_training=is_training, features_local=features_local, reuse=reuse)
         #output = tf.nn.sigmoid(self.model_output)
         output = self.model_output
         return output
@@ -135,21 +143,19 @@ class Model(object):
                                              doc=docs[0], is_training=True, reuse=False)  # [batch_size, 1]
         self.score_neg = self.ensemble_model(features_local=features_local[1], query=queries,
                                              doc=docs[1], is_training=True, reuse=True)  # [batch_size, 1]
-        with tf.variable_scope("Optimizer"):
-            self.score_pos = tf.squeeze(self.score_pos, -1)  # [batch_size]
-            self.score_neg = tf.squeeze(self.score_neg, -1)  # [batch_size]
+        #with tf.variable_scope("Optimizer"):
+        with tf.name_scope("loss"):
+            self.score_pos = tf.squeeze(self.score_pos, -1, name="squeeze_pos")  # [batch_size]
+            self.score_neg = tf.squeeze(self.score_neg, -1, name="squeeze_neg")  # [batch_size]
+            self.sub = tf.subtract(self.score_pos, self.score_neg, name="pos_sub_neg")
 
-            self.sub = tf.subtract(self.score_pos, self.score_neg)
-
-            with tf.name_scope("loss"):
-                self.losses = tf.maximum(0.0, tf.subtract(1.0, tf.subtract(self.score_pos, self.score_neg)))
-                self.loss = tf.reduce_mean(self.losses)
+            self.losses = tf.maximum(0.0, tf.subtract(1.0, tf.subtract(self.score_pos, self.score_neg)))
+            self.loss = tf.reduce_mean(self.losses)
             self.sm_loss_op = tf.summary.scalar('Loss', self.loss)
 
-            print("loss:", self.loss)
-            with tf.name_scope("optimizer"):
-                #self.optimize_op = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
-                self.optimize_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+        with tf.name_scope("optimizer"):
+            self.optimize_op = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+            #self.optimize_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
     def test(self, feature_local, query, doc):
         self.score = self.ensemble_model(features_local=feature_local, query=query,
