@@ -171,5 +171,6 @@ class Model(object):
     def test(self, feature_local, query, doc):
         self.score = self.ensemble_model(features_local=feature_local, query=query,
                                          doc=doc, is_training=False, reuse=True)
+        self.score = tf.squeeze(self.score, axis=-1)
         print("score:", self.score)
 

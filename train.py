@@ -115,7 +115,7 @@ with tf.Session(config=config) as sess:
             _, loss, score_pos, score_neg, subs = sess.run([model.train_op, model.loss, model.score_pos,
                                                             model.score_neg, model.sub], feed_dict)
 
-            if step % 300 == 0:
+            if step % 500 == 0:
                 print(step, " - loss:", loss)
                 #print("max:",max_score)
                 #print("features_0:", features_local0[:1,:3,:10])
