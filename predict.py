@@ -47,7 +47,8 @@ with tf.Session(config=config) as sess:
                   filter_size=FLAGS.filter_size,
                   keep_prob=FLAGS.keep_prob)
     """
-    log_dir = "../logs/lr0.001_bz128_mg1_1496330529/"  # + model_name
+    # 此处需要根据model名字改
+    log_dir = "../logs/lr0.001_bz128_mg1_1496330529/"
     model_path = os.path.join(log_dir, "model.ckpt-20.meta")
 
     # 加载结构，模型参数和变量
