@@ -176,13 +176,13 @@ class LoadTestData(object):
                 line = json.loads(line)
                 passages = line['passages']
                 query_id = line['query_id']
-                local_query = list(line['query'].split())
-                query = list(map(self._word_2_id, line['query'].split()))
+                ori_query = line['query'].split()
+                query = list(map(self._word_2_id, ori_query))
                 for passage in passages:
                     passage_id = passage['passage_id']
                     label = passage['label']
-                    local_passage = list(passage['passage_text'].split())
-                    passage_text_list = list(map(self._word_2_id, passage['passage_text'].split()))
+                    ori_passage = passage['passage_text'].split()
+                    passage_text_list = list(map(self._word_2_id, ori_passage))
                     queries.append(query)
                     query_ids.append(query_id)
                     answers_ids.append(passage_id)
@@ -190,9 +190,9 @@ class LoadTestData(object):
                     answers.append(passage_text_list)
 
                     local_match = np.zeros(shape=[self.query_len_threshold, self.doc_len_threshold], dtype=np.int32)
-                    for i in range(min(self.query_len_threshold,len(local_query))):
+                    for i in range(min(self.query_len_threshold,len(ori_query))):
                         for j in range(min(self.doc_len_threshold,len(local_passage))):
-                            if local_query[i] == local_passage[j]:
+                            if ori_query[i] == local_passage[j]:
                                 local_match[i,j] = 1
                     batch_features_local.append(local_match)
 

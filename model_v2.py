@@ -20,8 +20,8 @@ class Model(object):
         self._input_layer()
         self.optimizer(self.features_local, self.queries, self.docs)
         self.test(self.feature_local, self.query, self.doc)
-        #self.merged_summary_op = tf.summary.merge([self.sm_loss_op, self.sm_emx_op])
-        self.merged_summary_op = tf.summary.merge([self.sm_loss_op])
+        self.merged_summary_op = tf.summary.merge([self.sm_loss_op, self.sm_emx_op])
+        #self.merged_summary_op = tf.summary.merge([self.sm_loss_op])
 
     def _input_layer(self):
         #with tf.variable_scope('Inputs'):
@@ -55,26 +55,15 @@ class Model(object):
         with tf.variable_scope('Local_model'):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
-            print("features_local: ", features_local)
-            features_local = tf.reshape(features_local, [-1, self.max_query_word, self.max_doc_word, 1],
+            features_local = tf.reshape(features_local, [-1, self.max_query_word, self.max_doc_word],
                                         name="reshape_features_local")  # [?,15,200]
-            print("features_local: ", features_local)
-            conv = tf.layers.conv2d(inputs=features_local, filters=self.filter_size, kernel_size=[1, 101],
+            conv = tf.layers.conv1d(inputs=features_local, filters=self.filter_size, kernel_size=[1],
                                     activation=tf.nn.relu, name="conv_l1")  # [?,15,1,self.filter_size]
-            print("conv1: ", conv)
-            #conv = tf.layers.conv2d(inputs=conv, filters=256, kernel_size=[1, 100],
-            #                        activation=tf.nn.relu, name="conv_l2")
-            #print("conv2: ", conv)
-            conv = tf.reshape(conv, [-1, 2 * self.filter_size * self.max_query_word], name="conv_l2")  # [?,15*self.filter_size]
-            print("conv: ", conv)
+            conv = tf.reshape(conv, [-1, self.filter_size * self.max_query_word], name="conv_l2")  # [?,15*self.filter_size]
             dense1 = tf.layers.dense(inputs=conv, units=self.filter_size, activation=tf.nn.tanh, name="fc_l1")  # [?,self.filter_size]
-            print("dense1: ", dense1)
             dense2 = tf.layers.dense(inputs=dense1, units=self.filter_size, activation=tf.nn.tanh, name="fc_l2")
-            print("dense2: ", dense2)
             dropout = tf.layers.dropout(inputs=dense2, rate=self.keep_prob, training=is_training, name="droupout_l")
-            print("dropout: ", dropout)
             dense3 = tf.layers.dense(inputs=dropout, units=1, activation=tf.nn.tanh, name="fc_l3")  #[?,1]
-            print("dense3: ", dense3)
             self.local_output = dense3
             return self.local_output
 
@@ -83,65 +72,54 @@ class Model(object):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
             embedding_query, embedding_doc = self._embed_layer(query=query, doc=doc)
-            print("embeded_query: ", embedding_query)
-            print("embeded_doc: ", embedding_doc)
 
             with tf.variable_scope('distrib_query'):
-                print("in dis query")
                 query = tf.reshape(embedding_query,
-                                   [-1, self.max_query_word, self.embedding_size, 1])  # [?, max_query_word(=15), self.embedding_size,1]
-                print("query: ", query)
-                conv1 = tf.layers.conv2d(inputs=query, filters=self.filter_size,
-                                         kernel_size=[3, self.embedding_size],
-                                         activation=tf.nn.tanh, name="conv_query")  # [?,15-3+1,1, self.filter_size]
-                print("conv1: ", conv1)
+                                   [-1, self.max_query_word, self.embedding_size, 1])  # [?, 15, self.embedding_size,1]
+                conv1 = tf.nn.conv2d(input=query, filter=[3, 100, 1, 128],
+                                     strides=[1, 1, 1, 1],
+                                     padding='VALID',
+                                     name="conv_query")
+                conv1 = tf.nn.relu(conv1, name='act_relu')
+                # conv1 = tf.tanh(conv1, name='act_tanh')
                 pooling_size = self.max_query_word - 3 + 1
-                print("pooling_size: ", pooling_size)
-                pool1 = tf.layers.max_pooling2d(inputs=conv1,
-                                                pool_size=[pooling_size, 1],
-                                                strides=[1, 1], name="pooling_query")  # [?, 1,1 self.filter_size]
-                print("pool1: ", pool1)
+                pool1 = tf.nn.max_pool(value=conv1,  # [batch, height, weight, channels]
+                                       ksize=[1, pooling_size, 1, 1],
+                                       strides=[1, 1, 1, 1],
+                                       padding='VALID',
+                                       name='pooling_query')
+
                 pool1 = tf.reshape(pool1, [-1, self.filter_size])  # [?, self.filter_size]
-                print("pool1: ", pool1)
-                dense1 = tf.layers.dense(inputs=pool1, units=self.filter_size, activation=tf.nn.tanh, name="fc_query")
+                dense1 = tf.conrib.layers.fully_connected(inputs=pool1,
+                                                          num_outputs=self.filter_size,
+                                                          activation_fn=tf.tanh,
+                                                          scope='fc_query')
+                #dense1 = tf.layers.dense(inputs=pool1, units=self.filter_size, activation=tf.nn.tanh, name="fc_query")
                 distrib_query = dense1  # [?, self.filter_size]
 
             with tf.variable_scope('distrib_doc'):
-                print("in dis doc")
                 doc = tf.reshape(embedding_doc, [-1, self.max_doc_word, self.embedding_size])
-                print("doc: ", doc)
                 conv1 = tf.layers.conv1d(inputs=doc,
                                          filters=self.filter_size,
                                          kernel_size=[3],
                                          activation=tf.nn.tanh,
                                          name="conv_doc1")  # [?, self.max_doc_word -3 +1, self.filter_size]
-                print("conv1: ", conv1)
                 pooling_size = 80
                 pool1 = tf.layers.max_pooling1d(inputs=conv1, pool_size=[pooling_size], strides=[1],
                                                 name="pooling_doc1")
-                print("pool1: ", pool1)
                 # [?, self.max_doc_word-3+1-pooling_size+1, self.filter_size]
                 conv2 = tf.layers.conv1d(inputs=pool1, filters=self.filter_size, kernel_size=[1], name="conv_doc2")
-                print("conv2: ", conv2)
                 distrib_doc = conv2  # like before
                 dims1 = self.max_doc_word - pooling_size - 1
                 dims2 = (self.max_doc_word - pooling_size - 1) * self.filter_size
-                print("dims1: ", dims1)
-                print("dims2: ", dims2)
 
             distrib_query = tf.tile(tf.expand_dims(distrib_query, 1), [1, dims1, 1])
-            print("tile dis query:", distrib_query)
             distrib = tf.multiply(distrib_query, distrib_doc)  # [?, dims1, self.filter_size]
-            print("distrib: ", distrib)
             distrib = tf.reshape(distrib, [-1, dims2])  # [?, dims2]
-            print("distrib: ", distrib)
             fuly1 = tf.layers.dense(inputs=distrib, units=self.filter_size, activation=tf.nn.tanh, name="fc_dis1")
-            print("fully1: ", fuly1)
             #fuly2 = tf.layers.dense(inputs=fuly1, units=self.filter_size, activation=tf.nn.tanh)
             drop2 = tf.layers.dropout(inputs=fuly1, rate=self.keep_prob, training=is_training, name="droupout_dis1")
-            print("drop2: ", drop2)
             fuly3 = tf.layers.dense(inputs=drop2, units=1, activation=tf.nn.tanh, name="fc_dis2")
-            print("fuly3: ", fuly3)
             self.distrib_output = fuly3  # [?, 1]
             print("distrib_output:", self.distrib_output)
             return self.distrib_output
@@ -150,18 +128,18 @@ class Model(object):
         with tf.variable_scope('Ensemble_model'):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
-            """
-            self.model_output = tf.add(self.local_model(is_training=is_training, 
-                                                        features_local=features_local, 
-                                                         reuse=reuse),
-                                       self.distrib_model(is_training=is_training, 
+
+            self.model_output = tf.add(self.local_model(is_training=is_training,
+                                                        features_local=features_local,
+                                                        reuse=reuse),
+                                       self.distrib_model(is_training=is_training,
                                                           query=query,
                                                           doc=doc,
                                                           reuse=reuse),
                                        name='score')
-            """
+
             #self.model_output =  self.distrib_model(is_training=is_training, query=query, doc=doc, reuse=reuse)
-            self.model_output = self.local_model(is_training=is_training, features_local=features_local, reuse=reuse)
+            #self.model_output = self.local_model(is_training=is_training, features_local=features_local, reuse=reuse)
         #output = tf.nn.sigmoid(self.model_output)
         output = self.model_output
         return output

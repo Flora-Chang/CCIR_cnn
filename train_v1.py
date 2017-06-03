@@ -6,7 +6,7 @@ import tensorflow as tf
 from util import FLAGS
 
 from model import Model
-from load_data import get_vocab_dict, LoadTrainData, LoadTestData, get_word_vector
+from load_data_v1 import get_vocab_dict, LoadTrainData, LoadTestData, get_word_vector
 from tester import test
 
 # 加载词典
@@ -16,6 +16,13 @@ vocab_size = len(vocab_dict)
 #print("vocab_size: ",vocab_size)
 #print("word_vector: ", len(word_vectors))
 
+training_set = LoadTrainData(vocab_dict,
+                             data_path=FLAGS.training_set,
+                             query_len_threshold=FLAGS.query_len_threshold,
+                             doc_len_threshold=FLAGS.doc_len_threshold,
+                             batch_size=FLAGS.batch_size)
+
+"""
 training_set = LoadTrainData(vocab_dict,
                           data_path=FLAGS.training_set,
                           query_len_threshold=FLAGS.query_len_threshold,
@@ -27,7 +34,7 @@ features_local_batch, query_batch, docs_batch = \
                            batch_size=FLAGS.batch_size,
                            capacity=20000,
                            min_after_dequeue=2000)
-
+"""
 dev_set = LoadTestData(vocab_dict, "../data/dev.json",
                        query_len_threshold=FLAGS.query_len_threshold,
                        doc_len_threshold=FLAGS.doc_len_threshold,
@@ -78,13 +85,15 @@ with tf.Session(config=config) as sess:
     test_DCG_full = []
 
     step = 0
-    total_steps = FLAGS.total_training_num // FLAGS.batch_size
-    print("total steps number: ", total_steps)
+    #total_steps = FLAGS.total_training_num // FLAGS.batch_size
+    #print("total steps number: ", total_steps)
     num_epochs = FLAGS.num_epochs
     for epoch in range(num_epochs):
         print("epoch: ", epoch)
-        for i in range(total_steps):
-            features_local, queries, docs = sess.run([features_local_batch, query_batch, docs_batch])
+        #for i in range(10):
+        #    features_local, queries, docs = sess.run([features_local_batch, query_batch, docs_batch])
+        for batch_data in training_set.next_batch():
+            features_local, (_, queries), (_, docs)= batch_data
             labels = np.zeros(shape=[FLAGS.batch_size, 2], dtype=np.float32)
             for label in labels:
                 label[0] = 1
