@@ -36,6 +36,11 @@ def test(sess, model, testing_set, filename=None):
     DCG_3 = []
     DCG_5 = []
     DCG_full = []
+<<<<<<< HEAD
+=======
+    little_list = []
+    little_dcg = []
+>>>>>>> ffz
 
     zero_3 = 0
     zero_5 = 0
@@ -73,6 +78,15 @@ def test(sess, model, testing_set, filename=None):
             norm_dcg_3 = normalized_dcg_k(result, real, 3)
             norm_dcg_5 = normalized_dcg_k(result, real, 5)
             norm_dcg_full = normalized_dcg_k(result, real, rank[-1])
+<<<<<<< HEAD
+=======
+
+
+            if norm_dcg_3 < 0.65 and norm_dcg_5 < 0.70:
+                little_list.append(query_id)
+                little_dcg.append(norm_dcg_3)
+
+>>>>>>> ffz
             result = passages.sort_values(by=['passage_id'], ascending=True).reset_index(drop=True)
             out_frames.append(result)
 
@@ -103,10 +117,23 @@ def test(sess, model, testing_set, filename=None):
 
     print("number of Zero DCG@3: ", zero_3)
     print("number of Zero DCG@5: ", zero_5)
+<<<<<<< HEAD
     print("DCG@3 Mean: ", dcg_3_mean, "\tNorm: ", norm_dcg_3_mean)
     print("DCG@5 Mean: ", dcg_5_mean, "\tNorm: ", norm_dcg_5_mean)
     print("DCG@full Mean: ", dcg_full_mean, "\tNorm: ", norm_dcg_full_mean)
     print("=" * 60)
+=======
+    print("DCG@3 Mean: ", dcg_3_mean, "mean: ", norm_dcg_3_mean)
+    print("DCG@5 Mean: ", dcg_5_mean, "mean: ", norm_dcg_5_mean)
+    print("DCG@full Mean: ", dcg_full_mean, "mean: ", norm_dcg_full_mean)
+    print("================================")
+
+
+    with open("./worse_queries.txt", 'w') as f:
+        for i, j in zip(little_list, little_dcg):
+            f.write(str(i) + '\t' + str(j) + '\n')
+
+>>>>>>> ffz
 
     return dcg_3_mean, dcg_5_mean, dcg_full_mean
 

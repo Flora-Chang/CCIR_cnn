@@ -67,10 +67,9 @@ class LoadTrainData(object):
         self.data_path = data_path
         self.doc_len_threshold = doc_len_threshold  # 句子长度限制
         self.query_len_threshold = query_len_threshold
-        self.data = np.array(open(self.data_path, 'r').readlines())
-        self.batch_index = 0
-        print("len data: ", len(self.data))
 
+        self.tfrecords = FLAGS.train_tfrecords
+        self._data_to_tfrecords()
 
     def _word_2_id(self, word):
         if word in self.vocab_dict.keys():
@@ -79,73 +78,66 @@ class LoadTrainData(object):
             res = self.vocab_dict['UNK']
         return res
 
-    def next_batch(self, shuffle=True):
-        self.batch_index = 0
-        #data = np.array(self.data)
-        data_size = len(self.data)
-        num_batches_per_epoch = int(data_size / self.batch_size) + 1
-        print("training_set:", data_size, num_batches_per_epoch)
-        '''
-        if shuffle:
-            shuffle_indices = np.random.permutation(np.arange(data_size))
-            shuffled_data = data[shuffle_indices]
-        else:
-            shuffled_data = data
-        '''
-        np.random.shuffle(self.data)
+    def _data_to_tfrecords(self):
+        if os.path.exists(self.tfrecords):
+            print("Exist tfrecords")
+            return
+        print("start data to tfrecords for train ...")
+        writer = tf.python_io.TFRecordWriter(self.tfrecords)
+        with open(self.data_path) as f:
+            for line in f:
+                line = line.strip().split(',')
+                ori_query = line[1].split()
+                ori_pos_ans = line[3].split()
+                ori_neg_ans = line[5].split()
+                query = list(map(self._word_2_id, ori_query))
+                pos_ans = list(map(self._word_2_id, ori_pos_ans))
+                neg_ans = list(map(self._word_2_id, ori_neg_ans))
 
-        while self.batch_index < num_batches_per_epoch \
-                and (self.batch_index + 1) * self.batch_size <= data_size:
-            query_ids = []
-            queries = []
-            doc_ids = []
-            docs = []
-            pos_answers = []
-            neg_answers = []
-            batch_features_local = []
-            start_index = self.batch_index * self.batch_size
-            self.batch_index += 1
-            end_index = min(self.batch_index * self.batch_size, data_size)
-            #batch_data = shuffled_data[start_index:end_index]
-            batch_data = self.data[start_index:end_index]
+                docs = [ori_pos_ans, ori_neg_ans]
+                features_local = np.array([])
+                for doc in docs:
+                    local_match = np.zeros(shape=[self.query_len_threshold, self.doc_len_threshold], dtype=np.int64)
+                    for i in range(min(self.query_len_threshold, len(ori_query))):
+                        for j in range(min(self.doc_len_threshold, len(doc))):
+                            if ori_query[i] == doc[j]:
+                                local_match[i, j] = 1
+                    local_match = local_match.reshape([self.query_len_threshold * self.doc_len_threshold])
+                    features_local = np.concatenate((features_local, local_match))
+                query = normalize(query, self.query_len_threshold)
+                pos_ans = normalize(pos_ans, self.doc_len_threshold)
+                neg_ans = normalize(neg_ans, self.doc_len_threshold)
+                features_local = features_local.astype(np.int64)
 
+                example = tf.train.Example(features=tf.train.Features(feature={
+                    "query": tf.train.Feature(int64_list=tf.train.Int64List(value=query)),
+                    "pos_ans": tf.train.Feature(int64_list=tf.train.Int64List(value=pos_ans)),
+                    "neg_ans": tf.train.Feature(int64_list=tf.train.Int64List(value=neg_ans)),
+                    "features_local": tf.train.Feature(int64_list=tf.train.Int64List(value=features_local))
+                }))
+                writer.write(example.SerializeToString())
+        writer.close()
 
-            for line in batch_data.tolist():
-                line = line.split(',')
-                query_id = int(line[0])
-                query = list(map(self._word_2_id, line[1].split()))
-                pos_id = int(line[2])
-                pos_ans = list(map(self._word_2_id, line[3].split()))
-                neg_id = int(line[4])
-                neg_ans = list(map(self._word_2_id, line[5].split()))
-                doc_id = [pos_id, neg_id]
-                query_ids.append(query_id)
-                queries.append(query)
-                pos_answers.append(pos_ans)
-                neg_answers.append(neg_ans)
-                doc_ids.append(doc_id)
+    def read_and_decode(self):
+        print("read_and_decode...")
+        filename_queue = tf.train.string_input_producer([self.tfrecords])
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(filename_queue)  # 返回文件名和文件
+        features = tf.parse_single_example(serialized_example,
+                                           features={
+                                               "query": tf.FixedLenFeature([self.query_len_threshold], tf.int64),
+                                               "pos_ans": tf.FixedLenFeature([self.doc_len_threshold], tf.int64),
+                                               "neg_ans": tf.FixedLenFeature([self.doc_len_threshold], tf.int64),
+                                               "features_local": tf.FixedLenFeature([2 * self.query_len_threshold *
+                                                                                     self.doc_len_threshold], tf.int64)
+                                           })
+        query = features['query']
+        pos_ans = features['pos_ans']
+        neg_ans = features['neg_ans']
+        features_local = tf.reshape(features['features_local'], [2, FLAGS.query_len_threshold, self.doc_len_threshold])
+        docs = [pos_ans, neg_ans]
 
-                features_local = []
-                query = list(line[1].split())
-                pos_doc = list(line[3].split())
-                neg_doc = list(line[5].split())
-                two_doc=[pos_doc,neg_doc]
-                for doc in two_doc:
-                    local_match = np.zeros(shape=[self.query_len_threshold, self.doc_len_threshold], dtype=np.int32)
-                    for i in range(min(self.query_len_threshold,len(query))):
-                        for j in range(min(self.doc_len_threshold,len(doc))):
-                            if query[i]==doc[j]:
-                                local_match[i,j] = 1
-                    features_local.append(local_match)
-                batch_features_local.append(features_local)
-
-            queries = batch(queries, self.query_len_threshold)
-            pos_answers = batch(pos_answers, self.doc_len_threshold)
-            neg_answers = batch(neg_answers, self.doc_len_threshold)
-            for (pos,neg) in zip(pos_answers, neg_answers):
-                docs.append([pos, neg])
-
-            yield batch_features_local, (query_ids, queries), (doc_ids, docs)
+        return features_local, query, docs
 
 
 class LoadTestData(object):

@@ -1,4 +1,5 @@
 .idea/*
 load_data_v1.py
+load_data_tfr.py
 tester_v2.py
 try.py

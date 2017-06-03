@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="ssh://caoxingchao@162.105.67.105:22/home/caoxingchao/Applications/anaconda3/bin/python" autoUploadExternalChanges="true">
+    <serverData>
+      <paths name="ssh://caoxingchao@162.105.67.105:22/home/caoxingchao/Applications/anaconda3/bin/python">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/caoxingchao/ffz_nlp/sougou/cntk_cnn" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>

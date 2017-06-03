@@ -126,7 +126,6 @@ with tf.Session(config=config) as sess:
 
             step += 1
 
-
         '''
         print("On test set:\n")
         dcg_3, dcg_5, dcg_full = test(sess, model, test_set)
