@@ -1,22 +1,20 @@
-import os
+import numpy as np
 import json
 
-import tensorflow as tf
-import numpy as np
 
-from util import FLAGS
-
-
-def get_vocab_dict(input_file=FLAGS.vocab_dict):
+def get_vocab_dict(input_file="../data/word_dict.txt"):
     # 返回 {word: id} 字典
     words_dict = {}
+    num = 0
     with open(input_file) as f:
         for word in f:
-            words_dict[word.strip()] = len(words_dict)
+            words_dict[word.strip()] = num
+            num += 1
+
     return words_dict
 
 
-def get_word_vector(input_file=FLAGS.word_vector):
+def get_word_vector(input_file="../data/vectors_word.txt"):
     word_vectors = []
     with open(input_file) as f:
         for line in f:
@@ -24,19 +22,8 @@ def get_word_vector(input_file=FLAGS.word_vector):
             word_vectors.append(line)
     return word_vectors
 
-
-def normalize(inputs, threshold_length):
-    inputs_ = np.zeros(shape=[threshold_length], dtype=np.int64)  # == PAD
-
-    for i, element in enumerate(inputs):
-        if i >= threshold_length:
-            break
-        inputs_[i] = element
-    return inputs_
-
-
 # output batch_major data
-def batch(inputs, threshold_length):
+def batch(inputs, threshold_length, max_sequence_length=None):
     sequence_lengths = [len(seq) for seq in inputs]
     batch_size = len(inputs)
     '''
@@ -56,21 +43,21 @@ def batch(inputs, threshold_length):
             inputs_batch_major[i, j] = element
 
     # [batch_size, max_time] -> [max_time, batch_size]
-    # inputs_time_major = inputs_batch_major.swapaxes(0, 1)
+    #inputs_time_major = inputs_batch_major.swapaxes(0, 1)
+
     return inputs_batch_major
 
 
 class LoadTrainData(object):
-    def __init__(self, vocab_dict, data_path,
-                 query_len_threshold, doc_len_threshold):
+    def __init__(self, vocab_dict, data_path, query_len_threshold, doc_len_threshold, batch_size=64):
         self.vocab_dict = vocab_dict
         self.data_path = data_path
+        self.batch_size = batch_size
         self.doc_len_threshold = doc_len_threshold  # 句子长度限制
         self.query_len_threshold = query_len_threshold
         self.data = np.array(open(self.data_path, 'r').readlines())
         self.batch_index = 0
         print("len data: ", len(self.data))
-
 
     def _word_2_id(self, word):
         if word in self.vocab_dict.keys():
@@ -154,10 +141,11 @@ class LoadTestData(object):
         self.data_path = data_path
         self.query_len_threshold = query_len_threshold
         self.doc_len_threshold = doc_len_threshold
-        self.batch_index = 0
+        self.index = 0
         self.data = open(data_path, 'r').readlines()
         self.data_size = len(self.data)
         self.batch_size = batch_size
+        self.cnt = 0
 
     def _word_2_id(self, word):
         if word in self.vocab_dict.keys():
@@ -169,10 +157,13 @@ class LoadTestData(object):
     def next_batch(self):
         if self.batch_size == -1:
             self.batch_size = 200
-            self.data_size = self.batch_size * 5
-        while (self.batch_index + 1) * self.batch_size <= self.data_size:
-            batch_data = self.data[self.batch_index * self.batch_size: (self.batch_index + 1) * self.batch_size]
-            self.batch_index += 1
+            self.data_size = self.batch_size*15
+        while (self.index ) * self.batch_size < self.data_size:
+            if (self.index + 1) * self.batch_size <= self.data_size:
+                batch_data = self.data[self.index * self.batch_size: (self.index + 1) * self.batch_size]
+            else:
+                batch_data = self.data[self.index * self.batch_size: self.data_size]
+            self.index += 1
             queries = []
             query_ids = []
             answers = []
@@ -181,16 +172,17 @@ class LoadTestData(object):
             batch_features_local = []
 
             for line in batch_data:
+                self.cnt += 1
                 line = json.loads(line)
                 passages = line['passages']
                 query_id = line['query_id']
-                ori_query = line['query'].split()
-                query = list(map(self._word_2_id, ori_query))
+                local_query = list(line['query'].split())
+                query = list(map(self._word_2_id, line['query'].split()))
                 for passage in passages:
                     passage_id = passage['passage_id']
                     label = passage['label']
-                    ori_passage = passage['passage_text'].split()
-                    passage_text_list = list(map(self._word_2_id, ori_passage))
+                    local_passage = list(passage['passage_text'].split())
+                    passage_text_list = list(map(self._word_2_id, passage['passage_text'].split()))
                     queries.append(query)
                     query_ids.append(query_id)
                     answers_ids.append(passage_id)
@@ -198,9 +190,9 @@ class LoadTestData(object):
                     answers.append(passage_text_list)
 
                     local_match = np.zeros(shape=[self.query_len_threshold, self.doc_len_threshold], dtype=np.int32)
-                    for i in range(min(self.query_len_threshold,len(ori_query))):
+                    for i in range(min(self.query_len_threshold,len(local_query))):
                         for j in range(min(self.doc_len_threshold,len(local_passage))):
-                            if ori_query[i] == local_passage[j]:
+                            if local_query[i] == local_passage[j]:
                                 local_match[i,j] = 1
                     batch_features_local.append(local_match)
 
@@ -209,3 +201,5 @@ class LoadTestData(object):
             queries = batch(queries, self.query_len_threshold)
             answers = batch(answers, self.doc_len_threshold)
             yield batch_features_local, (query_ids, queries), (answers_ids, answers, answers_label)
+
+        print("self.cnt:", self.cnt)
