@@ -96,7 +96,6 @@ class LoadTrainData(object):
             #batch_data = shuffled_data[start_index:end_index]
             batch_data = self.data[start_index:end_index]
 
-
             for line in batch_data.tolist():
                 line = line.split(',')
                 #query_id = int(line[0])
@@ -158,7 +157,7 @@ class LoadTestData(object):
         if self.batch_size == -1:
             self.batch_size = 200
             self.data_size = self.batch_size*15
-        while (self.index ) * self.batch_size < self.data_size:
+        while self.index * self.batch_size < self.data_size:
             if (self.index + 1) * self.batch_size <= self.data_size:
                 batch_data = self.data[self.index * self.batch_size: (self.index + 1) * self.batch_size]
             else:
@@ -195,6 +194,8 @@ class LoadTestData(object):
                             if local_query[i] == local_passage[j]:
                                 local_match[i,j] = 1
                     batch_features_local.append(local_match)
+
+
 
             queries = batch(queries, self.query_len_threshold)
             answers = batch(answers, self.doc_len_threshold)
