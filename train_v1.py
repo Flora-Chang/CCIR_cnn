@@ -122,7 +122,7 @@ with tf.Session(config=config) as sess:
                 train_DCG_3.append(dcg_5)
                 train_DCG_full.append(dcg_full)
 
-                dev_set = LoadTestData(vocab_dict, "../data/data1/dev.json", query_len_threshold=FLAGS.query_len_threshold,
+                dev_set = LoadTestData(vocab_dict, "../data/dev.json", query_len_threshold=FLAGS.query_len_threshold,
                                        doc_len_threshold=FLAGS.doc_len_threshold, batch_size=FLAGS.batch_size)
                 print("On validation set:\n")
 

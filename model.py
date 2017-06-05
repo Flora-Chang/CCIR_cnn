@@ -129,6 +129,7 @@ class Model(object):
             print("distrib_output:",self.distrib_output)
             return self.distrib_output
 
+
     def ensemble_model(self, features_local, query, doc, is_training=True, reuse=False):
         with tf.variable_scope('emsemble_model'):
             if reuse:
